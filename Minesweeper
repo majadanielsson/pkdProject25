@@ -14,14 +14,12 @@ import System.Exit
 -}
 data Cell = Unexplored | Mine | Clue Int deriving (Show, Eq)
 
+
 -- Coords tells the position of each cell on the board.
 -- INVARIANT: Int > 0 in (Int,Int)
 type Coords = (Int, Int)
 -- Board is the game field that is made up by a list of tuples containing a cell with its coordinate and data Cell value.
 type Board = [(Coords, Cell)]
--- MineTracker is a list of coordinates for the location of the mines on the board.
--- INVARIANT: Int > 0 in [(Int,Int)]
-type MineTracker = [(Int, Int)]
 
 -----------------------------------------------------------------------------------------------------------------------------
 
@@ -35,7 +33,7 @@ type MineTracker = [(Int, Int)]
 main :: IO ()
 main = do
   putStrLn "Let's play MineSweeper"
-  gamePlay unexploredBoard facit
+  gamePlay unexploredBoard testMain
   putStrLn "Game Over"
 
 {- gamePlay
@@ -46,7 +44,7 @@ main = do
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 gamePlay :: Board -> Board -> IO ()
-gamePlay gameBoard solution
+gamePlay gameBoard solution 
   | filter (\((x,y), c) -> c /= Mine) solution == filter (\((x,y), c) -> c /= Unexplored) gameBoard = do
     putStrLn "YOU WON!"
     putStrLn ""
@@ -75,24 +73,38 @@ gamePlay gameBoard solution
 -}
 gamePlayAux :: Board -> Board -> Int -> Int -> Board
 gamePlayAux gameBoard solution x y
-                     | 19 < x || x < 0 || 19 < y || y < 0 = gameBoard
-                     -- | snd (head (gamePlayAux' (x,y) solution)) == Clue 0 =
-                     | snd (head (gamePlayAux' (x,y) solution)) == Mine = solution
-                     | otherwise = insertCells (gamePlayAux' (x,y) solution) gameBoard
-                        where
-                          gamePlayAux' (x,y) [] = [((x,y), Unexplored)]
-                          gamePlayAux' (x,y) (((a,b), c):as)
-                              | (x,y) == (a,b) = [((x,y), c)]
-                              | otherwise = gamePlayAux' (x,y) as
-{- playAgain
-   Asks the user if they want to play again.
+        | 19 < x || x < 0 || 19 < y || y < 0 = gameBoard
+        | snd (head (findCell (x,y) solution)) == Clue 0 = 
+                      insertCells ((expand [((x,y), Clue 0)] solution) ++ [((x,y), Clue 0)]) gameBoard
+        | snd (head (findCell (x,y) solution)) == Mine = solution
+        | otherwise = insertCells (findCell (x,y) solution) gameBoard
+
+{- expand b1 b2
+   A brief human-readable description of the purpose of the function.
    PRE:  ... pre-condition on the arguments, if any ...
-   RETURNS: Starts the game over again or ends the game.
+   RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
-playAgain :: IO ()
-playAgain = do
+expand :: Board -> Board -> Board
+expand cells solution = expand' (trackNeighb cells) solution
+  where
+    expand' [] _ = []
+    expand' (x:xs) solution = (findCell x solution) ++ expand' xs solution
+
+{- findCell c b
+   A brief human-readable description of the purpose of the function.
+   PRE:  ... pre-condition on the arguments, if any ...
+   RETURNS: ... description of the result, in terms of the arguments ...
+   SIDE EFFECTS: ... side effects, if any, including exceptions ...
+   EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
+-}
+findCell :: Coords -> Board -> Board
+findCell (x,y) (((a,b), c):as)
+          | (x,y) == (a,b) = [((x,y), c)]
+          | otherwise = findCell (x,y) as
+
+playAgain = do 
   putStrLn ""
   putStrLn "Want to play again? y or n"
   putStrLn ""
@@ -109,7 +121,7 @@ playAgain = do
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 charToInt :: String -> Int
-charToInt str
+charToInt str 
   |str=="a"=0|str=="b"=1|str=="c"=2|str=="d"=3|str=="e"=4|str=="f"=5|str=="g"=6|str=="h"=7
   |str=="i"=8|str=="j"=9|str=="k"=10|str=="l"=11|str=="m"=12|str=="n"=13|str=="o"=14|str=="p"=15
   |str=="q"=16|str=="r"=17|str=="s"=18|str=="t"=19| otherwise = 21
@@ -123,7 +135,7 @@ charToInt str
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 printBoard :: Board -> IO ()
-printBoard playerBoard = printBoard' ((divideBoardString (stringBoard playerBoard) 0)
+printBoard playerBoard = printBoard' ((divideBoardString (stringBoard playerBoard) 0) 
                          ++ ["____________________________________________________________"]
                          ++ [" a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p  q  r  s  t "])
                 where
@@ -139,7 +151,7 @@ printBoard playerBoard = printBoard' ((divideBoardString (stringBoard playerBoar
 -}
 stringBoard :: Board -> String
 -- VARIANT: length (x:xs)
-stringBoard []     = []
+stringBoard [] = []
 stringBoard (x:xs) = showCell (snd x) ++ stringBoard xs
 
 {- divideBoardString s acc
@@ -168,6 +180,14 @@ showCell (Clue n)   = " " ++ (show n) ++ " "
 showCell Unexplored = " = "
 showCell Mine       = " x "
 
+
+
+testMain = 
+  let 
+    rm = randomMineCells
+  in
+    insertMines (trackNeighb rm) (insertCells rm emptyBoard)
+
 {- emptyBoard 
    Creates a board consisting of only empty cells (Clue 0).
    PRE:  ... pre-condition on the arguments, if any ...
@@ -182,7 +202,7 @@ emptyBoard = emptyBoard' 0 0
                 -- VARIANT: value x, value y
                 emptyBoard' 20 y = []
                 emptyBoard' x 19 = [((x,19), Clue 0)] ++ emptyBoard' (x+1) 0
-                emptyBoard' x y  = [((x,y), Clue 0)]  ++ emptyBoard' x (y+1)
+                emptyBoard' x y = [((x,y), Clue 0)] ++ emptyBoard' x (y+1)
 
 {- unexploredBoard 
    Creates a board consisting of only unexplored cells (Unexplored).
@@ -198,7 +218,40 @@ unexploredBoard = unexploredBoard' 0 0
                 --VARIANT: value x, value y 
                 unexploredBoard' 20 y = []
                 unexploredBoard' x 19 = [((x,19), Unexplored)] ++ unexploredBoard' (x+1) 0
-                unexploredBoard' x y  = [((x,y), Unexplored)]  ++ unexploredBoard' x (y+1)
+                unexploredBoard' x y = [((x,y), Unexplored)] ++ unexploredBoard' x (y+1)
+
+{- insertCells b1 b2
+   A brief human-readable description of the purpose of the function.
+   PRE:  ... pre-condition on the arguments, if any ...
+   RETURNS: ... description of the result, in terms of the arguments ...
+   SIDE EFFECTS: ... side effects, if any, including exceptions ...
+   EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
+-}
+insertCells :: Board -> Board -> Board
+-- VARIANT: length (x:xs)
+insertCells [] playboard = playboard
+insertCells (x:xs) playboard = insertCells xs (insertCells' x playboard)
+                    where 
+                      insertCells' :: (Coords, Cell) -> Board -> Board
+                      -- INVARIANT: length xs
+                      insertCells' ((x,y), c1) (((a,b), c2):as)
+                          | (x,y) == (a,b)   = (((a,b), c1):as)
+                          | otherwise        = ((a,b), c2): insertCells' ((x,y), c1) as
+
+{- trackNeighb b
+   Computes the coordinates adjacent to the coordinates of the cells on the board
+   PRE:  ... pre-condition on the arguments, if any ...
+   RETURNS: ... description of the result, in terms of the arguments ...
+   SIDE EFFECTS: ... side effects, if any, including exceptions ...
+   EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
+-}
+trackNeighb :: Board -> [Coords]
+trackNeighb playboard =  filter (\(x,y) -> x /= -1 && x /= 20 && y /= -1 && y /= 20) (trackNeighb' playboard)
+                where
+                 trackNeighb' [] = []
+                 trackNeighb' (((x,y), _ ):xs) = 
+                     trackNeighb' xs ++ [(x+1, y-1), (x, y-1), (x-1, y-1),(x+1, y), 
+                                       (x-1, y), (x+1, y+1), (x, y+1), (x-1, y+1)]
 
 {- randomMineCells
    Creates a board of 14 (not so random) mines...
@@ -212,55 +265,20 @@ randomMineCells = [((0,2), Mine), ((4,6),Mine),((4,5), Mine),((5,7), Mine),((1,6
                    ((9,9), Mine), ((11,12), Mine), ((14,16),Mine),((14,15), Mine),((15,17), Mine),
                    ((11,16), Mine),((18,12), Mine),((19,19), Mine)]
 
-{- insertCells b1 b2
+{- insertMines c b
    A brief human-readable description of the purpose of the function.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
-insertCells :: Board -> Board -> Board
--- VARIANT: length (x:xs)
-insertCells [] playboard = playboard
-insertCells (x:xs) playboard = insertCells xs (insertCells' x playboard)
+insertMines :: [Coords] -> Board -> Board
+insertMines [] playboard = playboard
+insertMines ((x,y):xs) playboard = insertMines xs (insertMines' (x,y) playboard)
                     where
-                      insertCells' :: (Coords, Cell) -> Board -> Board
-                      -- INVARIANT: length xs
-                      insertCells' ((x,y), c1) (((a,b), c2):xs)
-                          | (x,y) == (a,b)   = (((a,b), c1):xs)
-                          | otherwise        = ((a,b), c2): insertCells' ((x,y), c1) xs
-
-{- trackMines b
-   Computes the coordinates adjacent to the coordinates of the cells on the board
-   PRE:  ... pre-condition on the arguments, if any ...
-   RETURNS: ... description of the result, in terms of the arguments ...
-   SIDE EFFECTS: ... side effects, if any, including exceptions ...
-   EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
--}
-trackMines :: Board -> MineTracker
-trackMines playboard =  filter (\(x,y) -> x /= -1 && x /= 20 && y /= -1 && y /= 20) (trackMines' playboard)
-                where
-                 trackMines' [] = []
-                 trackMines' (((x,y), _ ):xs) =
-                     trackMines' xs ++ [(x+1, y-1), (x, y-1), (x-1, y-1),(x+1, y),
-                                       (x-1, y), (x+1, y+1), (x, y+1), (x-1, y+1)]
-
-{- insertTrack mineT b
-   A brief human-readable description of the purpose of the function.
-   PRE:  ... pre-condition on the arguments, if any ...
-   RETURNS: ... description of the result, in terms of the arguments ...
-   SIDE EFFECTS: ... side effects, if any, including exceptions ...
-   EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
--}
-insertTrack :: MineTracker -> Board -> Board
-insertTrack [] playboard = playboard
-insertTrack ((x,y):xs) playboard = insertTrack xs (insertTrack' (x,y) playboard)
-                    where
-                      insertTrack' (x,y) (((a,b), Mine):as)
+                      insertMines' (x,y) (((a,b), Mine):as) 
                             | (x,y) == (a,b) = (((a,b), Mine):as)
-                            | otherwise = ((a,b), Mine): insertTrack' (x,y) as
-                      insertTrack' (x,y) (((a,b), Clue c):as)
+                            | otherwise = ((a,b), Mine): insertMines' (x,y) as
+                      insertMines' (x,y) (((a,b), Clue c):as)
                             | (x,y) == (a,b) = (((a,b), Clue (c+1)):as)
-                            | otherwise = ((a,b), Clue c): insertTrack' (x,y) as
-
-facit = (insertTrack (trackMines randomMineCells) (insertCells randomMineCells emptyBoard))
+                            | otherwise = ((a,b), Clue c): insertMines' (x,y) as
