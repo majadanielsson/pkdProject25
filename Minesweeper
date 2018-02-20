@@ -14,18 +14,20 @@ import System.Exit
 -}
 data Cell = Unexplored | Mine | Clue Int deriving (Show, Eq)
 
--- Coords tells the position of each cell in the game.
+-- Coords tells the position of each cell on the board.
+-- INVARIANT: Int > 0 in (Int,Int)
 type Coords = (Int, Int)
 -- Board is the game field that is made up by a list of tuples containing a cell with its coordinate and data Cell value.
 type Board = [(Coords, Cell)]
 -- MineTracker is a list of coordinates for the location of the mines on the board.
+-- INVARIANT: Int > 0 in [(Int,Int)]
 type MineTracker = [(Int, Int)]
 
 -----------------------------------------------------------------------------------------------------------------------------
 
 {- main
-   A brief human-readable description of the purpose of the function.
-   PRE:  ... pre-condition on the arguments, if any ...
+   Starts the game.
+   PRE: True
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
@@ -37,7 +39,7 @@ main = do
   putStrLn "Game Over"
 
 {- gamePlay
-   A brief human-readable description of the purpose of the function.
+   Asks the user wich cell to uncover and later tells the user if they have won or lost.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -65,7 +67,7 @@ gamePlay gameBoard solution
     gamePlay (gamePlayAux gameBoard solution (read x) (charToInt y)) solution
 
 {- gamePlayAux b1 b2 x y
-   Reveals what is hidden at a given coordinate on the board
+   Reveals what is hidden at a given coordinate on the board.
    PRE: True
    RETURNS: b1 with the coordinate (x,y) changed based on b2
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -83,9 +85,9 @@ gamePlayAux gameBoard solution x y
                               | (x,y) == (a,b) = [((x,y), c)]
                               | otherwise = gamePlayAux' (x,y) as
 {- playAgain
-   A brief human-readable description of the purpose of the function.
+   Asks the user if they want to play again.
    PRE:  ... pre-condition on the arguments, if any ...
-   RETURNS: ... description of the result, in terms of the arguments ...
+   RETURNS: Starts the game over again or ends the game.
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
@@ -100,7 +102,7 @@ playAgain = do
   else do exitFailure
 
 {- charToInt s
-   Maps each letter on the board to its corresponding integer coordinate
+   Maps each letter on the board to its corresponding integer coordinate.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -114,7 +116,7 @@ charToInt str
 
 {- printBoard b
    Prints the board in the terminal with underlaying letters and numbers on the right side to help the user to point
-   out the right coordinate.
+   out the right coordinate and cell they want to unvail.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -128,7 +130,7 @@ printBoard playerBoard = printBoard' ((divideBoardString (stringBoard playerBoar
                   printBoard' (x:xs) = mapM_ print (x:xs)
 
 {- stringBoard b
-   Converts all cells in a board into how they are to be displayed on the game board
+   Converts all cells in a board into how they are to be displayed on the game board.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: b where all elements are converted from type Board into how they are to
             be displayed on the game board
@@ -136,23 +138,25 @@ printBoard playerBoard = printBoard' ((divideBoardString (stringBoard playerBoar
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 stringBoard :: Board -> String
-stringBoard [] = []
+-- VARIANT: length (x:xs)
+stringBoard []     = []
 stringBoard (x:xs) = showCell (snd x) ++ stringBoard xs
 
 {- divideBoardString s acc
    Divides a string into groups of 60 and ends each new string with a boarder what number
-   string it is, starting at 0
+   string it is, starting at 0.
    PRE: True
    RETURNS: s divided into acc+1 groups of 60
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 divideBoardString :: String -> Int -> [String]
+-- VARIANT: length xs
 divideBoardString [] b = []
 divideBoardString xs b = [(take 60 xs) ++ "|" ++ (show b)] ++ divideBoardString (drop 60 xs) (b+1)
 
 {- showCell cell
-   Converts a cell into how it is to be displayed on the game board
+   Converts a cell into how it is to be displayed on the game board.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -165,7 +169,7 @@ showCell Unexplored = " = "
 showCell Mine       = " x "
 
 {- emptyBoard 
-   Creates a board consisting of only empty cells (Clue 0)
+   Creates a board consisting of only empty cells (Clue 0).
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -178,10 +182,10 @@ emptyBoard = emptyBoard' 0 0
                 -- VARIANT: value x, value y
                 emptyBoard' 20 y = []
                 emptyBoard' x 19 = [((x,19), Clue 0)] ++ emptyBoard' (x+1) 0
-                emptyBoard' x y = [((x,y), Clue 0)] ++ emptyBoard' x (y+1)
+                emptyBoard' x y  = [((x,y), Clue 0)]  ++ emptyBoard' x (y+1)
 
 {- unexploredBoard 
-   Creates a board consisting of only unexplored cells (Unexplored)
+   Creates a board consisting of only unexplored cells (Unexplored).
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
    SIDE EFFECTS: ... side effects, if any, including exceptions ...
@@ -194,7 +198,7 @@ unexploredBoard = unexploredBoard' 0 0
                 --VARIANT: value x, value y 
                 unexploredBoard' 20 y = []
                 unexploredBoard' x 19 = [((x,19), Unexplored)] ++ unexploredBoard' (x+1) 0
-                unexploredBoard' x y = [((x,y), Unexplored)] ++ unexploredBoard' x (y+1)
+                unexploredBoard' x y  = [((x,y), Unexplored)]  ++ unexploredBoard' x (y+1)
 
 {- randomMineCells
    Creates a board of 14 (not so random) mines...
@@ -208,7 +212,7 @@ randomMineCells = [((0,2), Mine), ((4,6),Mine),((4,5), Mine),((5,7), Mine),((1,6
                    ((9,9), Mine), ((11,12), Mine), ((14,16),Mine),((14,15), Mine),((15,17), Mine),
                    ((11,16), Mine),((18,12), Mine),((19,19), Mine)]
 
-{- insertCells b newB
+{- insertCells b1 b2
    A brief human-readable description of the purpose of the function.
    PRE:  ... pre-condition on the arguments, if any ...
    RETURNS: ... description of the result, in terms of the arguments ...
@@ -216,12 +220,15 @@ randomMineCells = [((0,2), Mine), ((4,6),Mine),((4,5), Mine),((5,7), Mine),((1,6
    EXAMPLES: ... especially if useful to highlight delicate issues; also consider including counter-examples ...
 -}
 insertCells :: Board -> Board -> Board
+-- VARIANT: length (x:xs)
 insertCells [] playboard = playboard
 insertCells (x:xs) playboard = insertCells xs (insertCells' x playboard)
-                     where
-                      insertCells' ((x,y), c1) (((a,b), c2):as)
-                          | (x,y) == (a,b) = (((a,b), c1):as)
-                          | otherwise = ((a,b), c2): insertCells' ((x,y), c1) as
+                    where
+                      insertCells' :: (Coords, Cell) -> Board -> Board
+                      -- INVARIANT: length xs
+                      insertCells' ((x,y), c1) (((a,b), c2):xs)
+                          | (x,y) == (a,b)   = (((a,b), c1):xs)
+                          | otherwise        = ((a,b), c2): insertCells' ((x,y), c1) xs
 
 {- trackMines b
    Computes the coordinates adjacent to the coordinates of the cells on the board
